@@ -9,7 +9,7 @@ if [ "$1" == "local" ]; then
 	export PATH=/home/savoca/toolchains/android-toolchain-eabi/bin:$PATH
 else
 	echo "Remote Build"
-	build=/home/savoca/downloads/furnace/m8/aosp
+	build=/home/savoca/downloads/furnace/bacon/aosp
 	export PATH=/home/savoca/storage/toolchains/android-toolchain-eabi/bin:$PATH
 fi
 kernel="furnace"
