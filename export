@@ -3,14 +3,15 @@
 # Final zip will exist in "build" as "furnace-1.0.0-aosp_hammerhead.zip" for example
 # If you are using a non-appended dt.image, you will need to add "--dt path/to/dt.img" and
 # the appropriate lines for dtbTool to compile it, if not prebuilt.
+export ARCH=arm
 if [ "$1" == "local" ]; then
 	echo "Local Build"
 	build=/home/savoca/dev/output
-	export PATH=/home/savoca/toolchains/android-toolchain-eabi/bin:$PATH
+	export CROSS_COMPILE=/home/savoca/toolchains/android-toolchain-eabi/bin/arm-eabi-
 else
 	echo "Remote Build"
 	build=/home/savoca/downloads/furnace/bacon/aosp
-	export PATH=/home/savoca/storage/toolchains/android-toolchain-eabi/bin:$PATH
+	export CROSS_COMPILE=/home/savoca/storage/toolchains/android-toolchain-eabi/bin/arm-eabi-
 fi
 kernel="furnace"
 version="1.0.0"
