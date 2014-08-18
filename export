@@ -14,7 +14,7 @@ else
 	export CROSS_COMPILE=/home/savoca/storage/toolchains/android-toolchain-eabi-4.9/bin/arm-eabi-
 fi
 kernel="furnace"
-version="1.0.4"
+version="1.0.5"
 rom="aosp"
 variant="bacon"
 ramdisk=ramdisk
