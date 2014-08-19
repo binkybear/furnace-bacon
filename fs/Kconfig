@@ -282,4 +282,8 @@ endif # NETWORK_FILESYSTEMS
 source "fs/nls/Kconfig"
 source "fs/dlm/Kconfig"
 
+config FSYNC
+	bool "Enable/Disable fsync calls"
+	default n
+
 endmenu
