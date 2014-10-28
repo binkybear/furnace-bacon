@@ -30,6 +30,7 @@
 #include <asm/mach/arch.h>
 #include <mach/board.h>
 #include <mach/gpiomux.h>
+#include <mach/msm_kcal.h>
 #include <mach/msm_iomap.h>
 #ifdef CONFIG_ION_MSM
 #include <linux/msm_ion.h>
@@ -98,6 +99,7 @@ void __init msm8974_add_drivers(void)
 		msm_clock_init(&msm8974_clock_init_data);
 	tsens_tm_init_driver();
 	msm_thermal_device_init();
+	msm_kcal_ctrl_init();
 }
 
 #define DISP_ESD_GPIO 28
