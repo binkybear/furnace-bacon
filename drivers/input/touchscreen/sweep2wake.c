@@ -25,6 +25,7 @@
 #include <linux/delay.h>
 #include <linux/init.h>
 #include <linux/err.h>
+#include <linux/input/sweep2dim.h>
 #include <linux/input/sweep2wake.h>
 #include <linux/slab.h>
 #include <linux/workqueue.h>
@@ -49,6 +50,9 @@ MODULE_AUTHOR(DRIVER_AUTHOR);
 MODULE_DESCRIPTION(DRIVER_DESCRIPTION);
 MODULE_VERSION(DRIVER_VERSION);
 MODULE_LICENSE("GPLv2");
+
+#define KCAL_DOWN	1
+#define KCAL_UP		2
 
 #ifdef CONFIG_MACH_MSM8974_HAMMERHEAD
 /* Hammerhead aka Nexus 5 */
@@ -93,6 +97,7 @@ MODULE_LICENSE("GPLv2");
 
 /* Resources */
 int s2w_switch = 0;
+int s2d_switch = 0;
 static int s2w_debug = 0;
 static int s2w_pwrkey_dur = 60;
 static int touch_x = 0, touch_y = 0;
@@ -165,7 +170,7 @@ static void detect_sweep2wake(int x, int y)
 		pr_info(LOGTAG"x: %d, y: %d\n", x, y);
 
 	//right->left
-	if ((scr_suspended == false) && (s2w_switch > 0)) {
+	if ((scr_suspended == false) && ((s2w_switch > 0) || (s2d_switch == 1))) {
 		scr_on_touch=true;
 		prevx = (S2W_X_MAX - S2W_X_FINAL);
 		nextx = S2W_X_B2;
@@ -187,7 +192,10 @@ static void detect_sweep2wake(int x, int y)
 					if (x < S2W_X_FINAL) {
 						if (exec_count) {
 							pr_info(LOGTAG"OFF\n");
-							sweep2wake_pwrtrigger();
+							if (s2d_switch == 1)
+								kcal_send_sweep(KCAL_DOWN);
+							else
+								sweep2wake_pwrtrigger();
 							exec_count = false;
 						}
 					}
@@ -214,7 +222,10 @@ static void detect_sweep2wake(int x, int y)
 					if (x > S2W_X_B5) {
 						if (exec_count) {
 							pr_info(LOGTAG"OFF\n");
-							sweep2wake_pwrtrigger();
+							if (s2d_switch == 1)
+								kcal_send_sweep(KCAL_UP);
+							else
+								sweep2wake_pwrtrigger();
 							exec_count = false;
 						}
 					}
@@ -226,7 +237,7 @@ static void detect_sweep2wake(int x, int y)
 
 static void s2w_input_callback(struct work_struct *unused) {
 
-	if (s2w_switch)
+	if (s2w_switch || s2d_switch)
 		detect_sweep2wake(touch_x, touch_y);
 
 	return;
@@ -235,7 +246,8 @@ static void s2w_input_callback(struct work_struct *unused) {
 static void s2w_input_event(struct input_handle *handle, unsigned int type,
 				unsigned int code, int value)
 {
-	if ((!s2w_switch) || ((scr_suspended) && (s2w_switch > 1)))
+	if ((!s2w_switch && !s2d_switch) ||
+				((scr_suspended) && (s2w_switch > 1)))
 		return;
 
 	if (code == ABS_MT_SLOT) {
@@ -374,7 +386,7 @@ static ssize_t s2w_sweep2wake_dump(struct device *dev,
 		struct device_attribute *attr, const char *buf, size_t count)
 {
 	if (buf[0] >= '0' && buf[0] <= '2' && buf[0] != '1' && buf[1] == '\n')
-	    if (s2w_switch != buf[0] - '0')
+	    if ((s2w_switch != buf[0] - '0') && (s2d_switch != 1))
 			s2w_switch = buf[0] - '0';
 
 	return count;
@@ -382,6 +394,29 @@ static ssize_t s2w_sweep2wake_dump(struct device *dev,
 
 static DEVICE_ATTR(sweep2wake, (S_IWUSR|S_IRUGO),
 	s2w_sweep2wake_show, s2w_sweep2wake_dump);
+
+static ssize_t s2w_sweep2dim_show(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	size_t count = 0;
+
+	count += sprintf(buf, "%d\n", s2d_switch);
+
+	return count;
+}
+
+static ssize_t s2w_sweep2dim_dump(struct device *dev,
+		struct device_attribute *attr, const char *buf, size_t count)
+{
+	if (buf[0] >= '0' && buf[0] <= '1' && buf[1] == '\n')
+		if ((s2d_switch != buf[0] - '0') && (s2w_switch != '2'))
+			s2d_switch = buf[0] - '0';
+
+	return count;
+}
+
+static DEVICE_ATTR(sweep2dim, (S_IWUSR|S_IRUGO),
+	s2w_sweep2dim_show, s2w_sweep2dim_dump);
 
 static ssize_t s2w_debug_show(struct device *dev,
 		struct device_attribute *attr, char *buf)
@@ -501,6 +536,10 @@ static int __init sweep2wake_init(void)
 	rc = sysfs_create_file(android_touch_kobj, &dev_attr_sweep2wake.attr);
 	if (rc) {
 		pr_warn("%s: sysfs_create_file failed for sweep2wake\n", __func__);
+	}
+	rc = sysfs_create_file(android_touch_kobj, &dev_attr_sweep2dim.attr);
+	if (rc) {
+		pr_warn("%s: sysfs_create_file failed for sweep2dim\n", __func__);
 	}
 	rc = sysfs_create_file(android_touch_kobj, &dev_attr_sweep2wake_debug.attr);
 	if (rc) {
