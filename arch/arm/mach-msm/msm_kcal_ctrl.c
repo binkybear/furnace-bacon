@@ -66,7 +66,7 @@ static int kcal_set_min(int kcal_min)
 		lut.r = lut.r < lut.min ? lut.min : lut.r;
 		lut.g = lut.g < lut.min ? lut.min : lut.g;
 		lut.b = lut.b < lut.min ? lut.min : lut.b;
-		update_preset_lcdc_lut(lut.r, lut.b, lut.g);
+		update_preset_lcdc_lut(lut.r, lut.g, lut.b);
 	}
 
 	return 0;
