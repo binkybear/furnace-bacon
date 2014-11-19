@@ -156,10 +156,10 @@ static ssize_t kcal_store(struct device *dev, struct device_attribute *attr,
 	if (kcal_r < 0 || kcal_r > 255)
 		return -EINVAL;
 
-	if (kcal_r < 0 || kcal_r > 255)
+	if (kcal_g < 0 || kcal_g > 255)
 		return -EINVAL;
 
-	if (kcal_r < 0 || kcal_r > 255)
+	if (kcal_b < 0 || kcal_b > 255)
 		return -EINVAL;
 
 	kcal_pdata.set_values(kcal_r, kcal_g, kcal_b);
