@@ -7,15 +7,15 @@ export ARCH=arm
 if [ "$1" == "local" ]; then
 	echo "Local Build"
 	build=/home/savoca/Documents/Kernel/build_output
-	export CROSS_COMPILE=/home/savoca/Documents/GoogleGCC/arm-eabi-4.8/bin/arm-eabi-
+	export CROSS_COMPILE=/home/savoca/Documents/GoogleGCC/arm-eabi-4.7/bin/arm-eabi-
 else
 	echo "Remote Build"
 	build=/home/savoca/downloads/furnace/bacon
-	export CROSS_COMPILE=/home/savoca/storage/toolchains/arm-eabi-4.8/bin/arm-eabi-
+	export CROSS_COMPILE=/home/savoca/storage/toolchains/arm-eabi-4.7/bin/arm-eabi-
 fi
 kernel="furnace"
 version="1.1.0"
-rom="aosp"
+rom="stock"
 variant="bacon"
 config="furnace_bacon_defconfig"
 kerneltype="zImage"
