@@ -21,7 +21,9 @@
 #include <linux/delay.h>
 #include <mach/msm_bus.h>
 #include <mach/msm_bus_board.h>
+#ifdef CONFIG_LCD_KCAL
 #include <mach/msm_kcal.h>
+#endif
 
 struct mdp_csc_cfg mdp_csc_convert[MDSS_MDP_MAX_CSC] = {
 	[MDSS_MDP_CSC_RGB2RGB] = {
@@ -1862,8 +1864,10 @@ int mdss_mdp_pp_resume(struct mdss_mdp_ctl *ctl, u32 dspp_num)
 				MDP_PP_OPS_WRITE;
 	}
 
+#ifdef CONFIG_LCD_KCAL
 	if (!disp_num)
 		pp_sts.pgc_sts |= PP_STS_ENABLE;
+#endif
 
 	if (pp_sts.pgc_sts & PP_STS_ENABLE) {
 		flags |= PP_FLAGS_DIRTY_PGC;
@@ -1878,6 +1882,7 @@ int mdss_mdp_pp_resume(struct mdss_mdp_ctl *ctl, u32 dspp_num)
 	return 0;
 }
 
+#ifdef CONFIG_LCD_KCAL
 static struct mdp_ar_gc_lut_data test_r[GC_LUT_SEGMENTS] = {
 		{0x00000000, 0x00000100, 0x00000000},
 		{0x00000FFF, 0x00000000, 0x00007F80},
@@ -1968,7 +1973,7 @@ static void mdss_mdp_pp_argc(void)
 	pgc_config->flags |= MDP_PP_OPS_WRITE;
 	pgc_config->flags |= MDP_PP_OPS_ENABLE;
 
-	pr_info(">>>>> %s \n", __func__);
+	pr_debug(">>>>> %s\n", __func__);
 }
 
 #define SCALED_BY_KCAL(rgb, kcal) \
@@ -2001,7 +2006,7 @@ static int mdss_mdp_pp_argc_kcal(int kr, int kg, int kb)
 	pgc_config->flags |= MDP_PP_OPS_ENABLE;
 	mdss_pp_res->pp_disp_flags[disp_num] |= PP_FLAGS_DIRTY_PGC;
 
-	pr_info(">>>>> %s \n", __func__);
+	pr_debug(">>>>> %s\n", __func__);
 
 	return 0;
 }
@@ -2010,7 +2015,7 @@ int update_preset_lcdc_lut(int kr, int kg, int kb)
 {
 	int ret = 0;
 
-	pr_info("%s: r=[%d], g=[%d], b=[%d]\n", __func__, kr, kg, kb);
+	pr_info("r=[%d], g=[%d], b=[%d]\n", kr, kg, kb);
 
 	ret = mdss_mdp_pp_argc_kcal(kr,kg,kb);
 
@@ -2019,6 +2024,7 @@ int update_preset_lcdc_lut(int kr, int kg, int kb)
 
 	return ret;
 }
+#endif
 
 int mdss_mdp_pp_init(struct device *dev)
 {
@@ -2059,10 +2065,12 @@ int mdss_mdp_pp_init(struct device *dev)
 		}
 	}
 
+#ifdef CONFIG_LCD_KCAL
 	if (!ret) {
 		mdss_mdp_pp_argc();
 		update_preset_lcdc_lut(255, 255, 255);
 	}
+#endif
 
 	mutex_unlock(&mdss_pp_mutex);
 	return ret;
@@ -2502,6 +2510,7 @@ pcc_config_exit:
 	return ret;
 }
 
+#ifdef CONFIG_LCD_KCAL
 int mdss_dsi_panel_invert(int enable)
 {
 	int i;
@@ -2544,6 +2553,7 @@ int mdss_dsi_panel_invert(int enable)
 
 	return 0;
 }
+#endif
 
 static void pp_read_igc_lut_cached(struct mdp_igc_lut_data *cfg)
 {
