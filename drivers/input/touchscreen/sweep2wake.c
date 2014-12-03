@@ -193,7 +193,9 @@ static void detect_sweep2wake(int x, int y)
 						if (exec_count) {
 							pr_info(LOGTAG"OFF\n");
 							if (s2d_switch == 1)
+#ifdef CONFIG_LCD_KCAL
 								kcal_send_sweep(KCAL_DOWN);
+#endif
 							else
 								sweep2wake_pwrtrigger();
 							exec_count = false;
@@ -223,7 +225,9 @@ static void detect_sweep2wake(int x, int y)
 						if (exec_count) {
 							pr_info(LOGTAG"OFF\n");
 							if (s2d_switch == 1)
+#ifdef CONFIG_LCD_KCAL
 								kcal_send_sweep(KCAL_UP);
+#endif
 							else
 								sweep2wake_pwrtrigger();
 							exec_count = false;
