@@ -46,6 +46,9 @@
 #include <linux/input/mt.h>
 #endif
 
+#include <linux/mfd/wcd9xxx/wcd9320_registers.h>
+#include <linux/mfd/wcd9xxx/sound_control_3_gpl.h>
+
 #define DRIVER_NAME "synaptics-rmi-ts"
 #define INPUT_PHYS_NAME "synaptics-rmi-ts/input0"
 
@@ -100,6 +103,9 @@
 #define NO_SLEEP_OFF (0 << 2)
 #define NO_SLEEP_ON (1 << 2)
 #define CONFIGURED (1 << 7)
+
+#define WCD_INCREASE 0x01
+#define WCD_DECREASE 0x02
 
 static int synaptics_rmi4_i2c_read(struct synaptics_rmi4_data *rmi4_data,
 		unsigned short addr, unsigned char *data,
@@ -1460,6 +1466,33 @@ static int synaptics_rmi4_proc_sweep_wake_write(struct file *filp, const char __
 	return len;
 }
 
+static int synaptics_rmi4_proc_sweep_vol_read(char *page, char **start, off_t off,
+		int count, int *eof, void *data)
+{
+	return sprintf(page, "%d\n", atomic_read(&syna_rmi4_data->sweep_vol_enable));
+}
+
+static int synaptics_rmi4_proc_sweep_vol_write(struct file *filp, const char __user *buff,
+		unsigned long len, void *data)
+{
+	int enable;
+	char buf[2];
+
+	if (len > 2)
+		return 0;
+
+	if (copy_from_user(buf, buff, len)) {
+		print_ts(TS_DEBUG, KERN_ERR "Read proc input error.\n");
+		return -EFAULT;
+	}
+
+	enable = (buf[0] == '0') ? 0 : 1;
+
+	atomic_set(&syna_rmi4_data->sweep_vol_enable, enable);
+
+	return len;
+}
+
 //smartcover proc read function
 static int synaptics_rmi4_proc_smartcover_read(char *page, char **start, off_t off,
 		int count, int *eof, void *data) {
@@ -1737,6 +1770,13 @@ static int synaptics_rmi4_init_touchpanel_proc(void)
 	if (proc_entry) {
 		proc_entry->write_proc = synaptics_rmi4_proc_sweep_wake_write;
 		proc_entry->read_proc = synaptics_rmi4_proc_sweep_wake_read;
+	}
+
+	// sweep vol
+	proc_entry = create_proc_entry("sweep_vol_enable", 0664, procdir);
+	if (proc_entry) {
+		proc_entry->write_proc = synaptics_rmi4_proc_sweep_vol_write;
+		proc_entry->read_proc = synaptics_rmi4_proc_sweep_vol_read;
 	}
 
 	//for pdoze enable/disable interface
@@ -2427,6 +2467,47 @@ hw_shutdown:
 	return 0;
 }
 
+static void synaptics_rmi4_audio_adjust(int action, unsigned int reg)
+{
+	int cur_vol, new_vol, chksum;
+
+	cur_vol = read_free_reg(reg);
+
+	if (cur_vol > 127)
+		cur_vol = (-1 * (256 - cur_vol));
+
+	if (cur_vol >= -30 && cur_vol <= 20) {
+		switch (action) {
+			case WCD_DECREASE:
+				pr_debug("[syna] volume down\n");
+				new_vol = cur_vol - 5;
+				new_vol = new_vol < -30 ? -30 : new_vol;
+				break;
+			case WCD_INCREASE:
+				pr_debug("[syna] volume up\n");
+				new_vol = cur_vol + 5;
+				new_vol = new_vol > 20 ? 20 : new_vol;
+				break;
+			default:
+				pr_debug("[syna] reset or no action\n");
+				new_vol = 0;
+				break;
+		}
+
+		if (new_vol < 0)
+			new_vol += 256;
+
+		chksum = (255 & (2147483647 ^ ((new_vol & 255) + (new_vol & 255))));
+
+		write_free_reg(reg, new_vol, chksum);
+
+	} else if (cur_vol == -84) {
+		pr_debug("[syna] wcd is not active\n");
+	} else {
+		pr_err("[syna] wcd read error\n");
+	}
+}
+
 static unsigned char synaptics_rmi4_update_gesture2(unsigned char *gesture,
 		unsigned char *gestureext)
 {
@@ -2459,6 +2540,27 @@ static unsigned char synaptics_rmi4_update_gesture2(unsigned char *gesture,
 				(gestureext[24] == 0x48) ? Down2UpSwip      :
 				(gestureext[24] == 0x80) ? DouSwip          :
 				UnknownGesture;
+
+			if (gesturemode == Up2DownSwip) {
+				if (atomic_read(&syna_rmi4_data->sweep_vol_enable)) {
+					synaptics_rmi4_audio_adjust(WCD_DECREASE,
+						TAIKO_A_CDC_RX1_VOL_CTL_B2_CTL);
+					synaptics_rmi4_audio_adjust(WCD_DECREASE,
+						TAIKO_A_CDC_RX2_VOL_CTL_B2_CTL);
+					synaptics_rmi4_audio_adjust(WCD_DECREASE,
+						TAIKO_A_CDC_RX3_VOL_CTL_B2_CTL);
+				}
+			} else if (gesturemode == Down2UpSwip) {
+				if (atomic_read(&syna_rmi4_data->sweep_vol_enable)) {
+					synaptics_rmi4_audio_adjust(WCD_INCREASE,
+						TAIKO_A_CDC_RX1_VOL_CTL_B2_CTL);
+					synaptics_rmi4_audio_adjust(WCD_INCREASE,
+						TAIKO_A_CDC_RX2_VOL_CTL_B2_CTL);
+					synaptics_rmi4_audio_adjust(WCD_INCREASE,
+						TAIKO_A_CDC_RX3_VOL_CTL_B2_CTL);
+				}
+			}
+
 			if (gesturemode == Left2RightSwip ||
 					gesturemode == Right2LeftSwip) {
 				if (atomic_read(&syna_rmi4_data->sweep_wake_enable))
@@ -4028,6 +4130,7 @@ static int synaptics_rmi4_set_input_dev(struct synaptics_rmi4_data *rmi4_data)
 	atomic_set(&rmi4_data->music_enable, 0);
 	atomic_set(&rmi4_data->flashlight_enable, 0);
 	atomic_set(&rmi4_data->sweep_wake_enable, 0);
+	atomic_set(&rmi4_data->sweep_vol_enable, 0);
 
 	rmi4_data->glove_enable = 0;
 	rmi4_data->pdoze_enable = 0;
@@ -4886,7 +4989,8 @@ static int synaptics_rmi4_suspend(struct device *dev)
 			atomic_read(&rmi4_data->camera_enable) ||
 			atomic_read(&rmi4_data->music_enable) ||
 			atomic_read(&rmi4_data->flashlight_enable) ||
-			atomic_read(&rmi4_data->sweep_wake_enable) ? 1 : 0);
+			atomic_read(&rmi4_data->sweep_wake_enable) ||
+			atomic_read(&rmi4_data->sweep_vol_enable) ? 1 : 0);
 
 	if (atomic_read(&rmi4_data->syna_use_gesture) || rmi4_data->pdoze_enable) {
 		synaptics_enable_gesture(rmi4_data,true);
@@ -4963,7 +5067,8 @@ static int synaptics_rmi4_resume(struct device *dev)
 			atomic_read(&rmi4_data->camera_enable) ||
 			atomic_read(&rmi4_data->music_enable) ||
 			atomic_read(&rmi4_data->flashlight_enable) ||
-			atomic_read(&rmi4_data->sweep_wake_enable) ? 1 : 0);
+			atomic_read(&rmi4_data->sweep_wake_enable) ||
+			atomic_read(&rmi4_data->sweep_vol_enable) ? 1 : 0);
 		rmi4_data->pwrrunning = false;
 		return 0;
 	}
