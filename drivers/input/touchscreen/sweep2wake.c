@@ -25,7 +25,6 @@
 #include <linux/delay.h>
 #include <linux/init.h>
 #include <linux/err.h>
-#include <linux/input/sweep2dim.h>
 #include <linux/input/sweep2wake.h>
 #include <linux/slab.h>
 #include <linux/workqueue.h>
@@ -36,6 +35,8 @@
 #include <linux/lcd_notify.h>
 #endif
 #include <linux/hrtimer.h>
+
+#include <mach/msm_kcal_ctrl.h>
 
 /* uncomment since no touchscreen defines android touch, do that here */
 //#define ANDROID_TOUCH_DECLARED
@@ -53,6 +54,7 @@ MODULE_LICENSE("GPLv2");
 
 #define KCAL_DOWN	1
 #define KCAL_UP		2
+#define KCAL_ADJUST	73
 
 #ifdef CONFIG_MACH_MSM8974_HAMMERHEAD
 /* Hammerhead aka Nexus 5 */
@@ -112,6 +114,8 @@ static struct input_dev * sweep2wake_pwrdev;
 static DEFINE_MUTEX(pwrkeyworklock);
 static struct workqueue_struct *s2w_input_wq;
 static struct work_struct s2w_input_work;
+
+static void kcal_send_sweep(int send);
 
 /* Read cmdline for s2w */
 static int __init read_s2w_cmdline(char *s2w)
@@ -195,6 +199,8 @@ static void detect_sweep2wake(int x, int y)
 							if (s2d_switch == 1)
 #ifdef CONFIG_LCD_KCAL
 								kcal_send_sweep(KCAL_DOWN);
+#else
+								pr_info(LOGTAG"sweep2dim not available\n");
 #endif
 							else
 								sweep2wake_pwrtrigger();
@@ -227,6 +233,8 @@ static void detect_sweep2wake(int x, int y)
 							if (s2d_switch == 1)
 #ifdef CONFIG_LCD_KCAL
 								kcal_send_sweep(KCAL_UP);
+#else
+								pr_info(LOGTAG"sweep2dim not available\n");
 #endif
 							else
 								sweep2wake_pwrtrigger();
@@ -237,6 +245,36 @@ static void detect_sweep2wake(int x, int y)
 			}
 		}
 	}
+}
+
+static void kcal_send_sweep(int send)
+{
+	int kcal_r, kcal_g, kcal_b;
+
+	kcal_r = mdss_mdp_pp_get_kcal(KCAL_DATA_R);
+	kcal_g = mdss_mdp_pp_get_kcal(KCAL_DATA_G);
+	kcal_b = mdss_mdp_pp_get_kcal(KCAL_DATA_B);
+
+	switch (send) {
+		case KCAL_DOWN:
+			kcal_r -= KCAL_ADJUST;
+			kcal_g -= KCAL_ADJUST;
+			kcal_b -= KCAL_ADJUST;
+			kcal_r = (kcal_r < 35) ? 35 : kcal_r;
+			kcal_g = (kcal_g < 35) ? 35 : kcal_g;
+			kcal_b = (kcal_b < 35) ? 35 : kcal_b;
+			break;
+		case KCAL_UP:
+			kcal_r += KCAL_ADJUST;
+			kcal_g += KCAL_ADJUST;
+			kcal_b += KCAL_ADJUST;
+			kcal_r = (kcal_r > 255) ? 255 : kcal_r;
+			kcal_g = (kcal_g > 255) ? 255 : kcal_g;
+			kcal_b = (kcal_b > 255) ? 255 : kcal_b;
+			break;
+	}
+
+	update_preset_lcdc_lut(kcal_r, kcal_g, kcal_b);
 }
 
 static void s2w_input_callback(struct work_struct *unused) {
