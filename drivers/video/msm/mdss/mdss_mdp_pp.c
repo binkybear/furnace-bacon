@@ -22,7 +22,7 @@
 #include <mach/msm_bus.h>
 #include <mach/msm_bus_board.h>
 #ifdef CONFIG_LCD_KCAL
-#include <mach/msm_kcal.h>
+#include <mach/msm_kcal_ctrl.h>
 #endif
 
 struct mdp_csc_cfg mdp_csc_convert[MDSS_MDP_MAX_CSC] = {
@@ -308,28 +308,28 @@ struct mdss_pp_res_type {
 };
 
 uint32_t igc_Table_RGB[256] = {
-		4080	,		4064	,		4048	,		4032	,		4016	,		4000	,		3984	,		3968	,		3952	,		3936	,		3920	,		3904	,
-		3888	,		3872	,		3856	,		3840	,		3824	,		3808	,		3792	,		3776	,		3760	,		3744	,		3728	,		3712	,
-		3696	,		3680	,		3664	,		3648	,		3632	,		3616	,		3600	,		3584	,		3568	,		3552	,		3536	,		3520	,
-		3504	,		3488	,		3472	,		3456	,		3440	,		3424	,		3408	,		3392	,		3376	,		3360	,		3344	,		3328	,
-		3312	,		3296	,		3280	,		3264	,		3248	,		3232	,		3216	,		3200	,		3184	,		3168	,		3152	,		3136	,
-		3120	,		3104	,		3088	,		3072	,		3056	,		3040	,		3024	,		3008	,		2992	,		2976	,		2960	,		2944	,
-		2928	,		2912	,		2896	,		2880	,		2864	,		2848	,		2832	,		2816	,		2800	,		2784	,		2768	,		2752	,
-		2736	,		2720	,		2704	,		2688	,		2672	,		2656	,		2640	,		2624	,		2608	,		2592	,		2576	,		2560	,
-		2544	,		2528	,		2512	,		2496	,		2480	,		2464	,		2448	,		2432	,		2416	,		2400	,		2384	,		2368	,
-		2352	,		2336	,		2320	,		2304	,		2288	,		2272	,		2256	,		2240	,		2224	,		2208	,		2192	,		2176	,
-		2160	,		2144	,		2128	,		2112	,		2096	,		2080	,		2064	,		2048	,		2032	,		2016	,		2000	,		1984	,
-		1968	,		1952	,		1936	,		1920	,		1904	,		1888	,		1872	,		1856	,		1840	,		1824	,		1808	,		1792	,
-		1776	,		1760	,		1744	,		1728	,		1712	,		1696	,		1680	,		1664	,		1648	,		1632	,		1616	,		1600	,
-		1584	,		1568	,		1552	,		1536	,		1520	,		1504	,		1488	,		1472	,		1456	,		1440	,		1424	,		1408	,
-		1392	,		1376	,		1360	,		1344	,		1328	,		1312	,		1296	,		1280	,		1264	,		1248	,		1232	,		1216	,
-		1200	,		1184	,		1168	,		1152	,		1136	,		1120	,		1104	,		1088	,		1072	,		1056	,		1040	,		1024	,
-		1008	,		992	,		976	,		960	,		944	,		928	,		912	,		896	,		880	,		864	,		848	,		832	,
-		816	,		800	,		784	,		768	,		752	,		736	,		720	,		704	,		688	,		672	,		656	,		640	,
-		624	,		608	,		592	,		576	,		560	,		544	,		528	,		512	,		496	,		480	,		464	,		448	,
-		432	,		416	,		400	,		384	,		368	,		352	,		336	,		320	,		304	,		288	,		272	,		256	,
-		240	,		224	,		208	,		192	,		176	,		160	,		144	,		128	,		112	,		96	,		80	,		64	,
-		48	,		32	,		16	,		0
+	4080, 4064, 4048, 4032, 4016, 4000, 3984, 3968, 3952, 3936, 3920, 3904,
+	3888, 3872, 3856, 3840, 3824, 3808, 3792, 3776, 3760, 3744, 3728, 3712,
+	3696, 3680, 3664, 3648, 3632, 3616, 3600, 3584, 3568, 3552, 3536, 3520,
+	3504, 3488, 3472, 3456, 3440, 3424, 3408, 3392, 3376, 3360, 3344, 3328,
+	3312, 3296, 3280, 3264, 3248, 3232, 3216, 3200, 3184, 3168, 3152, 3136,
+	3120, 3104, 3088, 3072, 3056, 3040, 3024, 3008, 2992, 2976, 2960, 2944,
+	2928, 2912, 2896, 2880, 2864, 2848, 2832, 2816, 2800, 2784, 2768, 2752,
+	2736, 2720, 2704, 2688, 2672, 2656, 2640, 2624, 2608, 2592, 2576, 2560,
+	2544, 2528, 2512, 2496, 2480, 2464, 2448, 2432, 2416, 2400, 2384, 2368,
+	2352, 2336, 2320, 2304, 2288, 2272, 2256, 2240, 2224, 2208, 2192, 2176,
+	2160, 2144, 2128, 2112, 2096, 2080, 2064, 2048, 2032, 2016, 2000, 1984,
+	1968, 1952, 1936, 1920, 1904, 1888, 1872, 1856, 1840, 1824, 1808, 1792,
+	1776, 1760, 1744, 1728, 1712, 1696, 1680, 1664, 1648, 1632, 1616, 1600,
+	1584, 1568, 1552, 1536, 1520, 1504, 1488, 1472, 1456, 1440, 1424, 1408,
+	1392, 1376, 1360, 1344, 1328, 1312, 1296, 1280, 1264, 1248, 1232, 1216,
+	1200, 1184, 1168, 1152, 1136, 1120, 1104, 1088, 1072, 1056, 1040, 1024,
+	1008, 992, 976, 960, 944, 928, 912, 896, 880, 864, 848, 832,
+	816, 800, 784, 768, 752, 736, 720, 704, 688, 672, 656, 640,
+	624, 608, 592, 576, 560, 544, 528, 512, 496, 480, 464, 448,
+	432, 416, 400, 384, 368, 352, 336, 320, 304, 288, 272, 256,
+	240, 224, 208, 192, 176, 160, 144, 128, 112, 96, 80, 64,
+	48, 32, 16, 0
 };
 int igc_c0_c1[256] = {0,};
 int igc_c2[256] = {0,};
@@ -1950,7 +1950,6 @@ static void mdss_mdp_pp_argc(void)
 	struct mdp_ar_gc_lut_data *b_data;
 	struct mdp_pgc_lut_data *pgc_config;
 
-
 	r_data = &mdss_pp_res->gc_lut_r[disp_num][0];
 	g_data = &mdss_pp_res->gc_lut_g[disp_num][0];
 	b_data = &mdss_pp_res->gc_lut_b[disp_num][0];
@@ -1959,7 +1958,6 @@ static void mdss_mdp_pp_argc(void)
 	memcpy(r_data, test_r, tbl_size);
 	memcpy(g_data, test_g, tbl_size);
 	memcpy(b_data, test_b, tbl_size);
-
 
 	pgc_config = &mdss_pp_res->pgc_disp_cfg[disp_num];
 
@@ -1976,14 +1974,20 @@ static void mdss_mdp_pp_argc(void)
 	pr_debug(">>>>> %s\n", __func__);
 }
 
-#define SCALED_BY_KCAL(rgb, kcal) \
-	((rgb * kcal * 256 ) / 65025)
+#define NUM_QLUT 256
+#define MAX_KCAL (NUM_QLUT - 1)
 
-static int mdss_mdp_pp_argc_kcal(int kr, int kg, int kb)
+#define SCALED_BY_KCAL(rgb, kcal) \
+	(((((unsigned int)(rgb) * (unsigned int)(kcal)) << 10) / \
+		(unsigned int)MAX_KCAL) >> 10)
+
+void update_preset_lcdc_lut(int kr, int kg, int kb)
 {
 	int i;
 	int disp_num = 0;
 	struct mdp_pgc_lut_data *pgc_config;
+
+	pr_info("r=[%d], g=[%d], b=[%d]\n", kr, kg, kb);
 
 	for (i = 0; i < GC_LUT_SEGMENTS; i++) {
 		mdss_pp_res->gc_lut_r[disp_num][i].slope =
@@ -2001,28 +2005,36 @@ static int mdss_mdp_pp_argc_kcal(int kr, int kg, int kb)
 		mdss_pp_res->gc_lut_b[disp_num][i].offset =
 		SCALED_BY_KCAL(test_b[i].offset, kb);
 	}
+
 	pgc_config = &mdss_pp_res->pgc_disp_cfg[disp_num];
 	pgc_config->flags |= MDP_PP_OPS_WRITE;
 	pgc_config->flags |= MDP_PP_OPS_ENABLE;
 	mdss_pp_res->pp_disp_flags[disp_num] |= PP_FLAGS_DIRTY_PGC;
 
 	pr_debug(">>>>> %s\n", __func__);
-
-	return 0;
 }
 
-int update_preset_lcdc_lut(int kr, int kg, int kb)
+int mdss_mdp_pp_get_kcal(int data)
 {
-	int ret = 0;
+	int ret;
+	int disp_num = 0;
 
-	pr_info("r=[%d], g=[%d], b=[%d]\n", kr, kg, kb);
+	switch (data) {
+		case KCAL_DATA_R:
+			ret = mdss_pp_res->gc_lut_r[disp_num][0].slope;
+			break;
+		case KCAL_DATA_G:
+			ret = mdss_pp_res->gc_lut_g[disp_num][0].slope;
+			break;
+		case KCAL_DATA_B:
+			ret = mdss_pp_res->gc_lut_b[disp_num][0].slope;
+			break;
+		default:
+			ret = 0;
+			break;
+	}
 
-	ret = mdss_mdp_pp_argc_kcal(kr,kg,kb);
-
-	if (ret)
-		pr_err("%s: failed to set lut! %d\n", __func__, ret);
-
-	return ret;
+	return (ret == NUM_QLUT) ? MAX_KCAL : ret;
 }
 #endif
 
@@ -2068,7 +2080,7 @@ int mdss_mdp_pp_init(struct device *dev)
 #ifdef CONFIG_LCD_KCAL
 	if (!ret) {
 		mdss_mdp_pp_argc();
-		update_preset_lcdc_lut(255, 255, 255);
+		update_preset_lcdc_lut(MAX_KCAL, MAX_KCAL, MAX_KCAL);
 	}
 #endif
 
@@ -2511,7 +2523,7 @@ pcc_config_exit:
 }
 
 #ifdef CONFIG_LCD_KCAL
-int mdss_dsi_panel_invert(int enable)
+int mdss_mdp_pp_panel_invert(bool enable)
 {
 	int i;
 	int disp_num = 0;

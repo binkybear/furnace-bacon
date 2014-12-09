@@ -17,138 +17,32 @@
  */
 
 #include <linux/kernel.h>
+#include <linux/slab.h>
 #include <linux/device.h>
 #include <linux/platform_device.h>
 #include <linux/init.h>
 #include <linux/module.h>
-#include <linux/input/sweep2dim.h>
-#include <mach/msm_kcal.h>
-#include "../../../drivers/video/msm/mdss/mdss_fb.h"
+#include <mach/msm_kcal_ctrl.h>
 
-static struct kcal_lut_data lut = {
-	.r = 255,
-	.g = 255,
-	.b = 255,
-	.min = 35,
-	.invert = 0
-};
-
-static struct kcal_sweep sweep = {
-	.up = 73,
-	.down = 73
-};
-
-static int kcal_set_values(int kcal_r, int kcal_g, int kcal_b)
+static void kcal_apply_values(struct kcal_lut_data *lut_data)
 {
-	lut.r = kcal_r < lut.min ? lut.min : kcal_r;
-	lut.g = kcal_g < lut.min ? lut.min : kcal_g;
-	lut.b = kcal_b < lut.min ? lut.min : kcal_b;
+	lut_data->red = (lut_data->red < lut_data->minimum) ?
+		lut_data->minimum : lut_data->red;
+	lut_data->green = (lut_data->green < lut_data->minimum) ?
+		lut_data->minimum : lut_data->green;
+	lut_data->blue = (lut_data->blue < lut_data->minimum) ?
+		lut_data->minimum : lut_data->blue;
 
-	if (kcal_r < lut.min || kcal_g < lut.min || kcal_b < lut.min)
-		update_preset_lcdc_lut(lut.r, lut.g, lut.b);
-
-	return 0;
+	update_preset_lcdc_lut(lut_data->red, lut_data->green, lut_data->blue);
 }
-
-static int kcal_get_values(int *kcal_r, int *kcal_g, int *kcal_b)
-{
-	*kcal_r = lut.r;
-	*kcal_g = lut.g;
-	*kcal_b = lut.b;
-	return 0;
-}
-
-static int kcal_set_min(int kcal_min)
-{
-	lut.min = kcal_min;
-
-	if (lut.min > lut.r || lut.min > lut.g || lut.min > lut.b) {
-		lut.r = lut.r < lut.min ? lut.min : lut.r;
-		lut.g = lut.g < lut.min ? lut.min : lut.g;
-		lut.b = lut.b < lut.min ? lut.min : lut.b;
-		update_preset_lcdc_lut(lut.r, lut.g, lut.b);
-	}
-
-	return 0;
-}
-
-static int kcal_get_min(int *kcal_min)
-{
-	*kcal_min = lut.min;
-
-	return 0;
-}
-
-static int kcal_set_invert(int kcal_inv)
-{
-	lut.invert = kcal_inv;
-
-	mdss_dsi_panel_invert(lut.invert);
-
-	return 0;
-}
-
-static int kcal_get_invert(int *kcal_inv)
-{
-	*kcal_inv = lut.invert;
-
-	return 0;
-}
-
-static int kcal_refresh_values(void)
-{
-	return update_preset_lcdc_lut(lut.r, lut.g, lut.b);
-}
-
-void kcal_send_sweep(int send)
-{
-	if (send == 1) {
-		lut.r -= sweep.down;
-		lut.g -= sweep.down;
-		lut.b -= sweep.down;
-
-	} else if (send == 2) {
-		if ((lut.r == 255) && (lut.g == 255) && (lut.b == 255))
-			return;
-
-		lut.r += sweep.up;
-		lut.g += sweep.up;
-		lut.b += sweep.up;
-
-	} else
-		return;
-
-	lut.r = lut.r < lut.min ? lut.min : lut.r;
-	lut.g = lut.g < lut.min ? lut.min : lut.g;
-	lut.b = lut.b < lut.min ? lut.min : lut.b;
-
-	lut.r = lut.r > 255 ? 255 : lut.r;
-	lut.g = lut.g > 255 ? 255 : lut.g;
-	lut.b = lut.b > 255 ? 255 : lut.b;
-
-	update_preset_lcdc_lut(lut.r, lut.g, lut.b);
-
-	return;
-}
-
-static struct kcal_platform_data kcal_pdata = {
-	.set_values = kcal_set_values,
-	.get_values = kcal_get_values,
-	.refresh_display = kcal_refresh_values,
-	.set_min = kcal_set_min,
-	.get_min = kcal_get_min,
-	.set_invert = kcal_set_invert,
-	.get_invert = kcal_get_invert
-};
 
 static ssize_t kcal_store(struct device *dev, struct device_attribute *attr,
 						const char *buf, size_t count)
 {
-	int kcal_r = 0;
-	int kcal_g = 0;
-	int kcal_b = 0;
+	int kcal_r, kcal_g, kcal_b;
+	struct kcal_lut_data *lut_data = dev_get_drvdata(dev);
 
-	if (!count)
+	if (count > 12)
 		return -EINVAL;
 
 	sscanf(buf, "%d %d %d", &kcal_r, &kcal_g, &kcal_b);
@@ -162,8 +56,11 @@ static ssize_t kcal_store(struct device *dev, struct device_attribute *attr,
 	if (kcal_b < 0 || kcal_b > 255)
 		return -EINVAL;
 
-	kcal_pdata.set_values(kcal_r, kcal_g, kcal_b);
-	kcal_pdata.refresh_display();
+	lut_data->red = kcal_r;
+	lut_data->green = kcal_g;
+	lut_data->blue = kcal_b;
+
+	kcal_apply_values(lut_data);
 
 	return count;
 }
@@ -171,21 +68,19 @@ static ssize_t kcal_store(struct device *dev, struct device_attribute *attr,
 static ssize_t kcal_show(struct device *dev, struct device_attribute *attr,
 								char *buf)
 {
-	int kcal_r = 0;
-	int kcal_g = 0;
-	int kcal_b = 0;
+	struct kcal_lut_data *lut_data = dev_get_drvdata(dev);
 
-	kcal_pdata.get_values(&kcal_r, &kcal_g, &kcal_b);
-
-	return sprintf(buf, "%d %d %d\n", kcal_r, kcal_g, kcal_b);
+	return sprintf(buf, "%d %d %d\n", lut_data->red, lut_data->green,
+		lut_data->blue);
 }
 
-static ssize_t kcal_min_store(struct device *dev, struct device_attribute *attr,
-						const char *buf, size_t count)
+static ssize_t kcal_min_store(struct device *dev,
+		struct device_attribute *attr, const char *buf, size_t count)
 {
-	int kcal_min = 0;
+	int kcal_min;
+	struct kcal_lut_data *lut_data = dev_get_drvdata(dev);
 
-	if (!count)
+	if (count > 4)
 		return -EINVAL;
 
 	sscanf(buf, "%d", &kcal_min);
@@ -193,28 +88,28 @@ static ssize_t kcal_min_store(struct device *dev, struct device_attribute *attr,
 	if (kcal_min < 0 || kcal_min > 255)
 		return -EINVAL;
 
-	kcal_pdata.set_min(kcal_min);
-	kcal_pdata.refresh_display();
+	lut_data->minimum = kcal_min;
+
+	kcal_apply_values(lut_data);
 
 	return count;
 }
 
-static ssize_t kcal_min_show(struct device *dev, struct device_attribute *attr,
-								char *buf)
+static ssize_t kcal_min_show(struct device *dev,
+		struct device_attribute *attr, char *buf)
 {
-	int kcal_min = 0;
+	struct kcal_lut_data *lut_data = dev_get_drvdata(dev);
 
-	kcal_pdata.get_min(&kcal_min);
-
-	return sprintf(buf, "%d\n", kcal_min);
+	return sprintf(buf, "%d\n", lut_data->minimum);
 }
 
 static ssize_t kcal_invert_store(struct device *dev,
 		struct device_attribute *attr,	const char *buf, size_t count)
 {
-	int kcal_inv = 0;
+	int kcal_inv;
+	struct kcal_lut_data *lut_data = dev_get_drvdata(dev);
 
-	if (!count)
+	if (count > 2)
 		return -EINVAL;
 
 	sscanf(buf, "%d", &kcal_inv);
@@ -222,7 +117,9 @@ static ssize_t kcal_invert_store(struct device *dev,
 	if (kcal_inv < 0 || kcal_inv > 1)
 		return -EINVAL;
 
-	kcal_pdata.set_invert(kcal_inv);
+	lut_data->inverted = (kcal_inv == 1);
+
+	mdss_mdp_pp_panel_invert(lut_data->inverted);
 
 	return count;
 }
@@ -230,71 +127,80 @@ static ssize_t kcal_invert_store(struct device *dev,
 static ssize_t kcal_invert_show(struct device *dev,
 		struct device_attribute *attr, char *buf)
 {
-	int kcal_inv = 0;
+	struct kcal_lut_data *lut_data = dev_get_drvdata(dev);
 
-	kcal_pdata.get_invert(&kcal_inv);
-
-	return sprintf(buf, "%d\n", kcal_inv);
+	return sprintf(buf, "%d\n", lut_data->inverted ? 1 : 0);
 }
 
 static DEVICE_ATTR(kcal, 0644, kcal_show, kcal_store);
 static DEVICE_ATTR(kcal_min, 0644, kcal_min_show, kcal_min_store);
 static DEVICE_ATTR(kcal_invert, 0644, kcal_invert_show, kcal_invert_store);
 
-static struct platform_device kcal_ctrl_device = {
-	.name = "kcal_ctrl",
-	.dev = {
-		.platform_data = &kcal_pdata,
-	}
-};
-
-static int kcal_ctrl_probe(struct platform_device *pdev)
+static int __devinit kcal_ctrl_probe(struct platform_device *pdev)
 {
-	int rc = 0;
+	int ret;
+	struct kcal_lut_data *lut_data;
 
-	if(!kcal_pdata.set_values || !kcal_pdata.get_values ||
-					!kcal_pdata.refresh_display)
-		return -1;
+	lut_data = kzalloc(sizeof(*lut_data), GFP_KERNEL);
+	if (!lut_data) {
+		pr_err("%s: failed to allocate memory for lut_data\n",
+			__func__);
+		return -ENOMEM;
+	}
 
-	rc = device_create_file(&pdev->dev, &dev_attr_kcal);
-	if (rc)
-		return -1;
-	rc = device_create_file(&pdev->dev, &dev_attr_kcal_min);
-	if (rc)
-		return -1;
-	rc = device_create_file(&pdev->dev, &dev_attr_kcal_invert);
-	if (rc)
-		return -1;
+	lut_data->red = mdss_mdp_pp_get_kcal(KCAL_DATA_R);
+	lut_data->green = mdss_mdp_pp_get_kcal(KCAL_DATA_G);
+	lut_data->blue = mdss_mdp_pp_get_kcal(KCAL_DATA_B);
+	lut_data->minimum = 35;
+	lut_data->inverted = false;
+
+	platform_set_drvdata(pdev, lut_data);
+
+	ret = device_create_file(&pdev->dev, &dev_attr_kcal);
+	ret |= device_create_file(&pdev->dev, &dev_attr_kcal_min);
+	ret |= device_create_file(&pdev->dev, &dev_attr_kcal_invert);
+	if (ret)
+		pr_err("%s: unable to create sysfs entries\n", __func__);
+
+	return ret;
+}
+
+static int __devexit kcal_ctrl_remove(struct platform_device *pdev)
+{
+	struct kcal_lut_data *lut_data = platform_get_drvdata(pdev);
+
+	device_remove_file(&pdev->dev, &dev_attr_kcal);
+	device_remove_file(&pdev->dev, &dev_attr_kcal_min);
+	device_remove_file(&pdev->dev, &dev_attr_kcal_invert);
+
+	kfree(lut_data);
 
 	return 0;
 }
 
 static struct platform_driver kcal_ctrl_driver = {
-	.probe  = kcal_ctrl_probe,
+	.probe = kcal_ctrl_probe,
+	.remove = kcal_ctrl_remove,
 	.driver = {
-		.name   = "kcal_ctrl",
+		.name = "kcal_ctrl",
 	},
 };
 
-int __init msm_kcal_ctrl_init(void)
+static struct platform_device kcal_ctrl_device = {
+	.name = "kcal_ctrl",
+};
+
+static int __init kcal_ctrl_init(void)
 {
-	int ret;
+	if (platform_driver_register(&kcal_ctrl_driver))
+		return -ENODEV;
 
-	ret = platform_driver_register(&kcal_ctrl_driver);
-	if (ret) {
-		pr_err("%s: driver register failed: %d\n", __func__, ret);
-		return ret;
-	}
+	if (platform_device_register(&kcal_ctrl_device))
+		return -ENODEV;
 
-	ret = platform_device_register(&kcal_ctrl_device);
-	if (ret) {
-		pr_err("%s: device register failed: %d\n", __func__, ret);
-		return ret;
-	}
+	pr_info("%s: registered\n", __func__);
 
-	pr_info("%s: driver registered\n", __func__);
-
-	return ret;
+	return 0;
 }
 
 static void __exit kcal_ctrl_exit(void)
@@ -303,7 +209,7 @@ static void __exit kcal_ctrl_exit(void)
 	platform_driver_unregister(&kcal_ctrl_driver);
 }
 
-device_initcall(msm_kcal_ctrl_init);
+late_initcall(kcal_ctrl_init);
 module_exit(kcal_ctrl_exit);
 
 MODULE_DESCRIPTION("LCD KCAL Driver");

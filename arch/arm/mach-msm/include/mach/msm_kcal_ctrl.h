@@ -1,5 +1,5 @@
 /*
- * arch/arm/mach-msm/include/mach/msm_kcal.h
+ * arch/arm/mach-msm/include/mach/msm_kcal_ctrl.h
  *
  * Copyright (c) 2013, LGE Inc. All rights reserved
  * Copyright (c) 2011-2013, The Linux Foundation. All rights reserved.
@@ -16,26 +16,25 @@
  * GNU General Public License for more details.
  */
 
-struct kcal_platform_data {
-	int (*set_values) (int r, int g, int b);
-	int (*get_values) (int *r, int *g, int *b);
-	int (*refresh_display) (void);
-	int (*set_min) (int min);
-	int (*get_min) (int *min);
-	int (*set_invert) (int inv);
-	int (*get_invert) (int *inv);
-};
+#ifndef __MSM_KCAL_CTRL_H
+#define __MSM_KCAL_CTRL_H
+
+#define KCAL_DATA_R 0x01
+#define KCAL_DATA_G 0x02
+#define KCAL_DATA_B 0x03
 
 struct kcal_lut_data {
-	int r;
-	int g;
-	int b;
-	int min;
-	int invert;
+	int red;
+	int green;
+	int blue;
+	int minimum;
+	bool inverted;
 };
 
-int update_preset_lcdc_lut(int kr, int kg, int kb);
+void update_preset_lcdc_lut(int kr, int kg, int kb);
 
-int mdss_dsi_panel_invert(int enable);
+int mdss_mdp_pp_panel_invert(bool enable);
 
-int __init msm_kcal_ctrl_init(void);
+int mdss_mdp_pp_get_kcal(int data);
+
+#endif
