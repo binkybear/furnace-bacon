@@ -1,6 +1,4 @@
 /*
- * arch/arm/mach-msm/msm_kcal_ctrl.c
- *
  * Copyright (c) 2013, LGE Inc. All rights reserved
  * Copyright (c) 2011-2013, The Linux Foundation. All rights reserved.
  * Copyright (c) 2014 savoca <adeddo27@gmail.com>
@@ -22,7 +20,8 @@
 #include <linux/platform_device.h>
 #include <linux/init.h>
 #include <linux/module.h>
-#include <mach/msm_kcal_ctrl.h>
+
+#include "mdss_mdp_kcal_ctrl.h"
 
 static void kcal_apply_values(struct kcal_lut_data *lut_data)
 {

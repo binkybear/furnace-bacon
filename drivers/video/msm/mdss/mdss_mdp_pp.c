@@ -21,9 +21,8 @@
 #include <linux/delay.h>
 #include <mach/msm_bus.h>
 #include <mach/msm_bus_board.h>
-#ifdef CONFIG_LCD_KCAL
-#include <mach/msm_kcal_ctrl.h>
-#endif
+
+#include "mdss_mdp_kcal_ctrl.h"
 
 struct mdp_csc_cfg mdp_csc_convert[MDSS_MDP_MAX_CSC] = {
 	[MDSS_MDP_CSC_RGB2RGB] = {
@@ -1864,10 +1863,8 @@ int mdss_mdp_pp_resume(struct mdss_mdp_ctl *ctl, u32 dspp_num)
 				MDP_PP_OPS_WRITE;
 	}
 
-#ifdef CONFIG_LCD_KCAL
 	if (!disp_num)
 		pp_sts.pgc_sts |= PP_STS_ENABLE;
-#endif
 
 	if (pp_sts.pgc_sts & PP_STS_ENABLE) {
 		flags |= PP_FLAGS_DIRTY_PGC;
@@ -1882,7 +1879,6 @@ int mdss_mdp_pp_resume(struct mdss_mdp_ctl *ctl, u32 dspp_num)
 	return 0;
 }
 
-#ifdef CONFIG_LCD_KCAL
 static struct mdp_ar_gc_lut_data test_r[GC_LUT_SEGMENTS] = {
 		{0x00000000, 0x00000100, 0x00000000},
 		{0x00000FFF, 0x00000000, 0x00007F80},
@@ -1974,13 +1970,6 @@ static void mdss_mdp_pp_argc(void)
 	pr_debug(">>>>> %s\n", __func__);
 }
 
-#define NUM_QLUT 256
-#define MAX_KCAL (NUM_QLUT - 1)
-
-#define SCALED_BY_KCAL(rgb, kcal) \
-	(((((unsigned int)(rgb) * (unsigned int)(kcal)) << 10) / \
-		(unsigned int)MAX_KCAL) >> 10)
-
 void update_preset_lcdc_lut(int kr, int kg, int kb)
 {
 	int i;
@@ -2036,7 +2025,6 @@ int mdss_mdp_pp_get_kcal(int data)
 
 	return (ret == NUM_QLUT) ? MAX_KCAL : ret;
 }
-#endif
 
 int mdss_mdp_pp_init(struct device *dev)
 {
@@ -2077,12 +2065,10 @@ int mdss_mdp_pp_init(struct device *dev)
 		}
 	}
 
-#ifdef CONFIG_LCD_KCAL
 	if (!ret) {
 		mdss_mdp_pp_argc();
 		update_preset_lcdc_lut(MAX_KCAL, MAX_KCAL, MAX_KCAL);
 	}
-#endif
 
 	mutex_unlock(&mdss_pp_mutex);
 	return ret;
@@ -2522,7 +2508,6 @@ pcc_config_exit:
 	return ret;
 }
 
-#ifdef CONFIG_LCD_KCAL
 int mdss_mdp_pp_panel_invert(bool enable)
 {
 	int i;
@@ -2565,7 +2550,6 @@ int mdss_mdp_pp_panel_invert(bool enable)
 
 	return 0;
 }
-#endif
 
 static void pp_read_igc_lut_cached(struct mdp_igc_lut_data *cfg)
 {

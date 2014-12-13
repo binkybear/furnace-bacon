@@ -1,6 +1,4 @@
 /*
- * arch/arm/mach-msm/include/mach/msm_kcal_ctrl.h
- *
  * Copyright (c) 2013, LGE Inc. All rights reserved
  * Copyright (c) 2011-2013, The Linux Foundation. All rights reserved.
  * Copyright (c) 2014, savoca <adeddo27@gmail.com>
@@ -16,12 +14,21 @@
  * GNU General Public License for more details.
  */
 
-#ifndef __MSM_KCAL_CTRL_H
-#define __MSM_KCAL_CTRL_H
+#ifndef __MDSS_MDP_KCAL_CTRL_H
+#define __MDSS_MDP_KCAL_CTRL_H
+
+#include "mdss_mdp.h"
 
 #define KCAL_DATA_R 0x01
 #define KCAL_DATA_G 0x02
 #define KCAL_DATA_B 0x03
+
+#define NUM_QLUT 256
+#define MAX_KCAL (NUM_QLUT - 1)
+
+#define SCALED_BY_KCAL(rgb, kcal) \
+	(((((unsigned int)(rgb) * (unsigned int)(kcal)) << 10) / \
+		(unsigned int)MAX_KCAL) >> 10)
 
 struct kcal_lut_data {
 	int red;

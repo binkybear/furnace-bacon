@@ -36,7 +36,9 @@
 #endif
 #include <linux/hrtimer.h>
 
-#include <mach/msm_kcal_ctrl.h>
+#ifdef CONFIG_FB_MSM_MDSS_KCAL_CTRL
+#include "../../video/msm/mdss/mdss_mdp_kcal_ctrl.h"
+#endif
 
 /* uncomment since no touchscreen defines android touch, do that here */
 //#define ANDROID_TOUCH_DECLARED
@@ -115,7 +117,9 @@ static DEFINE_MUTEX(pwrkeyworklock);
 static struct workqueue_struct *s2w_input_wq;
 static struct work_struct s2w_input_work;
 
+#ifdef CONFIG_FB_MSM_MDSS_KCAL_CTRL
 static void kcal_send_sweep(int send);
+#endif
 
 /* Read cmdline for s2w */
 static int __init read_s2w_cmdline(char *s2w)
@@ -197,7 +201,7 @@ static void detect_sweep2wake(int x, int y)
 						if (exec_count) {
 							pr_info(LOGTAG"OFF\n");
 							if (s2d_switch == 1)
-#ifdef CONFIG_LCD_KCAL
+#ifdef CONFIG_FB_MSM_MDSS_KCAL_CTRL
 								kcal_send_sweep(KCAL_DOWN);
 #else
 								pr_info(LOGTAG"sweep2dim not available\n");
@@ -231,7 +235,7 @@ static void detect_sweep2wake(int x, int y)
 						if (exec_count) {
 							pr_info(LOGTAG"OFF\n");
 							if (s2d_switch == 1)
-#ifdef CONFIG_LCD_KCAL
+#ifdef CONFIG_FB_MSM_MDSS_KCAL_CTRL
 								kcal_send_sweep(KCAL_UP);
 #else
 								pr_info(LOGTAG"sweep2dim not available\n");
@@ -247,6 +251,7 @@ static void detect_sweep2wake(int x, int y)
 	}
 }
 
+#ifdef CONFIG_FB_MSM_MDSS_KCAL_CTRL
 static void kcal_send_sweep(int send)
 {
 	int kcal_r, kcal_g, kcal_b;
@@ -276,6 +281,7 @@ static void kcal_send_sweep(int send)
 
 	update_preset_lcdc_lut(kcal_r, kcal_g, kcal_b);
 }
+#endif
 
 static void s2w_input_callback(struct work_struct *unused) {
 
