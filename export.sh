@@ -24,7 +24,7 @@ ps=2048
 base=0x00000000
 ramdisk_offset=0x02000000
 tags_offset=0x01e00000
-cmdline="console=ttyHSL0,115200,n8 androidboot.hardware=bacon user_debug=31 msm_rtb.filter=0x3F ehci-hcd.park=3 androidboot.selinux=permissive"
+cmdline="console=ttyHSL0,115200,n8 androidboot.hardware=bacon user_debug=31 msm_rtb.filter=0x3F ehci-hcd.park=3"
 
 function cleanme {
 	if [ -f arch/arm/boot/"$kerneltype" ]; then
