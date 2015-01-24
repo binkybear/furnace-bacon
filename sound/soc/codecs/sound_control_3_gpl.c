@@ -195,6 +195,18 @@ static bool calc_checksum(unsigned int a, unsigned int b, unsigned int c)
 	}
 }
 
+unsigned int read_free_reg(unsigned int reg)
+{
+	return taiko_read(fauxsound_codec_ptr, reg);
+}
+
+void write_free_reg(unsigned int reg, unsigned int val,
+		unsigned int chksum)
+{
+	if (calc_checksum(val, val, chksum))
+		taiko_write(fauxsound_codec_ptr, reg, val);
+}
+
 static ssize_t cam_mic_gain_show(struct kobject *kobj,
 		struct kobj_attribute *attr, char *buf)
 {
