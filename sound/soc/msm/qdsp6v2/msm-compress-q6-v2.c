@@ -175,6 +175,7 @@ static int msm_compr_set_volume(struct snd_compr_stream *cstream,
 {
 	struct msm_compr_audio *prtd;
 	int rc = 0;
+	uint32_t avg_vol;
 
 	pr_debug("%s: volume_l %d volume_r %d\n",
 		__func__, volume_l, volume_r);
@@ -183,6 +184,7 @@ static int msm_compr_set_volume(struct snd_compr_stream *cstream,
 		return -EPERM;
 	}
 	prtd = cstream->runtime->private_data;
+<<<<<<< HEAD
 	if (prtd && prtd->audio_client) {
 		pr_debug("%s: call q6asm_set_lrgain\n", __func__);
 		rc = q6asm_set_lrgain(prtd->audio_client, volume_l, volume_r);
@@ -190,7 +192,37 @@ static int msm_compr_set_volume(struct snd_compr_stream *cstream,
 			pr_err("%s: Send LR gain command failed rc=%d\n",
 				__func__, rc);
 		}
+=======
+
+	if (!prtd || !prtd->audio_client) {
+		pr_err("%s: invalid session prtd or no audio client", __func__);
+		return rc;
+>>>>>>> c4c4433eb85945fc6ee7d5ce9ccf93b2ebc62628
 	}
+
+	if (prtd->num_channels > 2) {
+		/*
+		 * Currently the left and right gains are averaged an applied
+		 * to all channels. This might not be desirable. But currently,
+		 * there exists no API in userspace to send a list of gains for
+		 * each channel either. If such an API does become available,
+		 * the mixer control must be updated to accept more than 2
+		 * channel gains.
+		 *
+		 */
+		pr_debug("%s: call q6asm_set_volume for multichannel\n",
+			 __func__);
+		avg_vol = (volume_l + volume_r) / 2;
+		rc = q6asm_set_volume(prtd->audio_client, avg_vol);
+	} else {
+		pr_debug("%s: call q6asm_set_lrgain\n", __func__);
+		rc = q6asm_set_lrgain(prtd->audio_client, volume_l,
+				      volume_r);
+	}
+
+	if (rc < 0)
+		pr_err("%s: Send vol gain command failed rc=%d\n",
+		       __func__, rc);
 
 	return rc;
 }
@@ -683,16 +715,21 @@ static int msm_compr_configure_dsp(struct snd_compr_stream *cstream)
 	};
 	if (prtd->codec_param.codec.format == SNDRV_PCM_FORMAT_S24_LE)
 		bits_per_sample = 24;
-	if (prtd->codec_param.codec.format == SNDRV_PCM_FORMAT_S32_LE)
+	else if (prtd->codec_param.codec.format == SNDRV_PCM_FORMAT_S32_LE)
 		bits_per_sample = 32;
 
+<<<<<<< HEAD
 	prtd->bits_per_sample = bits_per_sample;
 
 	pr_debug("%s: stream_id %d\n", __func__, ac->stream_id);
+=======
+	pr_debug("%s: stream_id %d bits_per_sample %d\n",
+			__func__, ac->stream_id, bits_per_sample);
+>>>>>>> c4c4433eb85945fc6ee7d5ce9ccf93b2ebc62628
 	ret = q6asm_stream_open_write_v2(ac,
-				prtd->codec, bits_per_sample,
-				ac->stream_id,
-				prtd->gapless_state.use_dsp_gapless_mode);
+			prtd->codec, bits_per_sample,
+			ac->stream_id,
+			prtd->gapless_state.use_dsp_gapless_mode);
 	if (ret < 0) {
 		pr_err("%s: Session out open failed\n", __func__);
 		 return -ENOMEM;
@@ -1180,6 +1217,7 @@ static int msm_compr_trigger(struct snd_compr_stream *cstream, int cmd)
 	unsigned long flags;
 	int stream_id;
 	uint32_t stream_index;
+	uint16_t bits_per_sample = 16;
 
 	if (cstream->direction != SND_COMPRESS_PLAYBACK) {
 		pr_err("%s: Unsupported stream type\n", __func__);
@@ -1420,7 +1458,11 @@ static int msm_compr_trigger(struct snd_compr_stream *cstream, int cmd)
 
 		/* Wait indefinitely for  DRAIN. Flush can also signal this*/
 		rc = wait_event_interruptible(prtd->eos_wait,
+<<<<<<< HEAD
 						(prtd->cmd_ack ||
+=======
+						(prtd->eos_ack ||
+>>>>>>> c4c4433eb85945fc6ee7d5ce9ccf93b2ebc62628
 						prtd->cmd_interrupt ||
 						atomic_read(&prtd->error)));
 
@@ -1545,9 +1587,21 @@ static int msm_compr_trigger(struct snd_compr_stream *cstream, int cmd)
 			}
 			break;
 		}
-		pr_debug("%s: open_write stream_id %d", __func__, stream_id);
+
+		if (prtd->codec_param.codec.format == SNDRV_PCM_FORMAT_S24_LE)
+			bits_per_sample = 24;
+		else if (prtd->codec_param.codec.format ==
+			 SNDRV_PCM_FORMAT_S32_LE)
+			bits_per_sample = 32;
+
+		pr_debug("%s: open_write stream_id %d bits_per_sample %d",
+				__func__, stream_id, bits_per_sample);
 		rc = q6asm_stream_open_write_v2(prtd->audio_client,
+<<<<<<< HEAD
 				prtd->codec, prtd->bits_per_sample,
+=======
+				prtd->codec, bits_per_sample,
+>>>>>>> c4c4433eb85945fc6ee7d5ce9ccf93b2ebc62628
 				stream_id,
 				prtd->gapless_state.use_dsp_gapless_mode);
 		if (rc < 0) {
