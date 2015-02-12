@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2015, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2014, The Linux Foundation. All rights reserved.
  * Author: Brian Swetland <swetland@google.com>
  *
  * This software is licensed under the terms of the GNU General Public
@@ -381,14 +381,6 @@ static void q6asm_session_free(struct audio_client *ac)
 	ac->perf_mode = LEGACY_PCM_MODE;
 	ac->fptr_cache_ops = NULL;
 	return;
-}
-
-static uint32_t q6asm_get_next_buf(uint32_t curr_buf, uint32_t max_buf_cnt)
-{
-	pr_debug("%s: curr_buf = %d, max_buf_cnt = %d\n",
-		 __func__, curr_buf, max_buf_cnt);
-	curr_buf += 1;
-	return (curr_buf >= max_buf_cnt) ? 0 : curr_buf;
 }
 
 void send_asm_custom_topology(struct audio_client *ac)
@@ -1197,8 +1189,6 @@ static int32_t q6asm_srvc_callback(struct apr_client_data *data, void *priv)
 				if (payload[0] ==
 				    ASM_CMD_SHARED_MEM_UNMAP_REGIONS)
 					atomic_set(&ac->unmap_cb_success, 0);
-				atomic_set(&ac->mem_state, -payload[1]);
-				wake_up(&ac->mem_wait);
 			} else {
 				if (payload[0] ==
 				    ASM_CMD_SHARED_MEM_UNMAP_REGIONS)
@@ -1261,8 +1251,6 @@ static int32_t is_no_wait_cmd_rsp(uint32_t opcode, uint32_t *cmd_type)
 			case ASM_SESSION_CMD_RUN_V2:
 			case ASM_SESSION_CMD_PAUSE:
 			case ASM_DATA_CMD_EOS:
-			case ASM_DATA_CMD_REMOVE_INITIAL_SILENCE:
-			case ASM_DATA_CMD_REMOVE_TRAILING_SILENCE:
 				return 1;
 			default:
 				break;
@@ -1572,8 +1560,7 @@ void *q6asm_is_cpu_buf_avail(int dir, struct audio_client *ac, uint32_t *size,
 		user accesses this function,increase cpu
 		buf(to avoid another api)*/
 		port->buf[idx].used = dir;
-		port->cpu_buf = q6asm_get_next_buf(port->cpu_buf,
-						   port->max_buf_cnt);
+		port->cpu_buf = ((port->cpu_buf + 1) & (port->max_buf_cnt - 1));
 		mutex_unlock(&port->lock);
 		return data;
 	}
@@ -1622,8 +1609,7 @@ void *q6asm_is_cpu_buf_avail_nolock(int dir, struct audio_client *ac,
 	 * buf(to avoid another api)
 	 */
 	port->buf[idx].used = dir;
-	port->cpu_buf = q6asm_get_next_buf(port->cpu_buf,
-					   port->max_buf_cnt);
+	port->cpu_buf = ((port->cpu_buf + 1) & (port->max_buf_cnt - 1));
 	return data;
 }
 
@@ -3927,8 +3913,7 @@ int q6asm_read(struct audio_client *ac)
 		read.buf_size = ab->size;
 		read.seq_id = port->dsp_buf;
 		read.hdr.token = port->dsp_buf;
-		port->dsp_buf = q6asm_get_next_buf(port->dsp_buf,
-						   port->max_buf_cnt);
+		port->dsp_buf = (port->dsp_buf + 1) & (port->max_buf_cnt - 1);
 		mutex_unlock(&port->lock);
 		pr_debug("%s:buf add[0x%x] token[%d] uid[%d]\n", __func__,
 						read.buf_addr_lsw,
@@ -3991,8 +3976,7 @@ int q6asm_read_nolock(struct audio_client *ac)
 			}
 		}
 
-		port->dsp_buf = q6asm_get_next_buf(port->dsp_buf,
-						   port->max_buf_cnt);
+		port->dsp_buf = (port->dsp_buf + 1) & (port->max_buf_cnt - 1);
 		pr_debug("%s:buf add[0x%x] token[%d] uid[%d]\n", __func__,
 					read.buf_addr_lsw,
 					read.hdr.token,
@@ -4183,8 +4167,7 @@ int q6asm_write(struct audio_client *ac, uint32_t len, uint32_t msw_ts,
 			write.flags = (0x00000000 | (flags & 0x800000FF));
 		else
 			write.flags = (0x80000000 | flags);
-		port->dsp_buf = q6asm_get_next_buf(port->dsp_buf,
-						   port->max_buf_cnt);
+		port->dsp_buf = (port->dsp_buf + 1) & (port->max_buf_cnt - 1);
 		buf_node = list_first_entry(&ac->port[IN].mem_map_handle,
 						struct asm_buffer_node,
 						list);
@@ -4255,8 +4238,7 @@ int q6asm_write_nolock(struct audio_client *ac, uint32_t len, uint32_t msw_ts,
 			write.flags = (0x00000000 | (flags & 0x800000FF));
 		else
 			write.flags = (0x80000000 | flags);
-		port->dsp_buf = q6asm_get_next_buf(port->dsp_buf,
-						   port->max_buf_cnt);
+		port->dsp_buf = (port->dsp_buf + 1) & (port->max_buf_cnt - 1);
 
 		pr_debug("%s:ab->phys[0x%x]bufadd[0x%x]token[0x%x] buf_id[0x%x]buf_size[0x%x]mmaphdl[0x%x]"
 							, __func__,
@@ -4638,22 +4620,18 @@ int __q6asm_send_meta_data(struct audio_client *ac, uint32_t stream_id,
 	silence.hdr.opcode = ASM_DATA_CMD_REMOVE_INITIAL_SILENCE;
 	silence.num_samples_to_remove    = initial_samples;
 
-	atomic_inc(&ac->nowait_cmd_cnt);
 	rc = apr_send_pkt(ac->apr, (uint32_t *) &silence);
 	if (rc < 0) {
-		pr_err("%s: Commmand silence failed[%d]", __func__, rc);
-		atomic_dec(&ac->nowait_cmd_cnt);
+		pr_err("Commmand silence failed[%d]", rc);
 		goto fail_cmd;
 	}
 
 	silence.hdr.opcode = ASM_DATA_CMD_REMOVE_TRAILING_SILENCE;
 	silence.num_samples_to_remove    = trailing_samples;
 
-	atomic_inc(&ac->nowait_cmd_cnt);
 	rc = apr_send_pkt(ac->apr, (uint32_t *) &silence);
 	if (rc < 0) {
-		pr_err("%s: Commmand silence failed[%d]", __func__, rc);
-		atomic_dec(&ac->nowait_cmd_cnt);
+		pr_err("Commmand silence failed[%d]", rc);
 		goto fail_cmd;
 	}
 

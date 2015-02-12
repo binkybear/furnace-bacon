@@ -10,7 +10,7 @@
  * GNU General Public License for more details.
  *
  */
-#ifdef CONFIG_OPPO_CAMERA
+#ifdef CONFIG_MACH_OPPO
 #include <media/msm_camera_oppo.h>
 #else
 
